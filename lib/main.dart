@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'database_helper.dart'; // <--- IMPORTACIÓN CORREGIDA
+import 'database_helper.dart';
 import 'libros.dart';
 
 void main() {
@@ -12,9 +12,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Formulario SQLite',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
       home: const MyHomePage(),
@@ -41,17 +41,20 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _cargarListaLibros() async {
-    final items = await dbHelper.getItems();
+    final itemsCargados = await dbHelper.getItems();
     setState(() {
-      this.items = items;
+      items = itemsCargados;
     });
   }
 
+  // SOLUCIÓN: Esta función implementa el formulario en un ModalBottomSheet
   void _mostrarFormulario([int? id]) async {
+    // Si se pasa un ID, es para editar. Llenamos el campo de texto.
     if (id != null) {
       final libroExistente = items.firstWhere((item) => item.id == id);
       _tituloController.text = libroExistente.tituloLibro;
     } else {
+      // Si no hay ID, es un libro nuevo. Limpiamos el campo.
       _tituloController.text = '';
     }
 
@@ -64,7 +67,8 @@ class _MyHomePageState extends State<MyHomePage> {
           top: 15,
           left: 15,
           right: 15,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 120,
+          // Esto hace que el formulario suba cuando aparece el teclado
+          bottom: MediaQuery.of(context).viewInsets.bottom + 50,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -72,21 +76,24 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             TextField(
               controller: _tituloController,
-              decoration: InputDecoration(hintText: id == null ? 'Ingrese el título' : 'Editar título'),
+              decoration: InputDecoration(hintText: id == null ? 'Ingrese el nuevo título' : 'Editar título'),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                if (_tituloController.text.isEmpty) return; // Evitar títulos vacíos
+                if (_tituloController.text.isEmpty) return;
+
                 if (id == null) {
                   await _agregarNuevoLibro();
                 } else {
                   await _actualizarLibro(id);
                 }
+                
+                // Limpiamos el texto y cerramos el formulario
                 _tituloController.text = '';
                 Navigator.of(context).pop();
               },
-              child: Text(id == null ? 'Agregar' : 'Actualizar'),
+              child: Text(id == null ? 'Agregar Nuevo' : 'Actualizar'),
             )
           ],
         ),
@@ -121,22 +128,24 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("SqlLite Flutter"),
+        title: const Text("Formulario en SQLite"),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       ),
-      body: ListView.separated(
+      body: ListView.builder(
         itemCount: items.length,
-        separatorBuilder: (context, index) => const Divider(),
         itemBuilder: (context, index) {
           final libro = items[index];
-          return ListTile(
-            title: Text(libro.tituloLibro),
-            subtitle: Text('ID: ${libro.id}'),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete, color: Colors.grey),
-              onPressed: () => _eliminarLibro(libro.id!),
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            child: ListTile(
+              title: Text(libro.tituloLibro),
+              subtitle: Text('ID: ${libro.id}'),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: () => _eliminarLibro(libro.id!),
+              ),
+              onTap: () => _mostrarFormulario(libro.id),
             ),
-            onTap: () => _mostrarFormulario(libro.id),
           );
         },
       ),
